@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Football Bet Predictor AI with Sportmonks Live Data</title>
+<title>Football Bet Predictor AI</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
   body {
@@ -15,11 +15,11 @@
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
-    box-sizing: border-box;
     padding: 12px;
+    box-sizing: border-box;
   }
   h1 {
-    margin: 15px 0 10px 0;
+    margin: 15px 0 25px 0;
     font-weight: 700;
     font-size: 1.9rem;
     letter-spacing: 1.8px;
@@ -70,13 +70,6 @@
     text-align: center;
     color: #caf0f8;
   }
-  #error-msg {
-    color: #ff5252;
-    font-weight: 700;
-    font-size: 1rem;
-    margin-bottom: 16px;
-    text-align: center;
-  }
   #predictions-container {
     width: 100%;
     max-width: 360px;
@@ -87,9 +80,6 @@
     box-sizing: border-box;
     user-select: none;
     color: #dbe9f4;
-    margin-bottom: 20px;
-    max-height: 500px;
-    overflow-y: auto;
   }
   .match-card {
     background: #1f628d;
@@ -134,7 +124,7 @@
     margin-top: 6px;
   }
   #saved-bets-container {
-    margin-top: 10px;
+    margin-top: 28px;
     width: 100%;
     max-width: 360px;
     background: #193549cc;
@@ -144,9 +134,6 @@
     box-shadow: 0 10px 30px #54d3c9aa;
     color: #ade8f4;
     font-weight: 700;
-    margin-bottom: 24px;
-    max-height: 280px;
-    overflow-y: auto;
   }
   #saved-bets-container h2 {
     margin-top: 0; margin-bottom: 14px;
@@ -230,58 +217,144 @@
 </style>
 </head>
 <body>
-  <h1>Football Bet Predictor AI with Sportmonks Data</h1>
+  <h1>Football Bet Predictor AI</h1>
   <button id="predict-btn" aria-label="Generate Football Betting Predictions">Predict Matches</button>
+
   <div id="loading-overlay" role="alert" aria-live="assertive" aria-busy="true">
-    <div class="loading-box">Fetching live data and calculating predictions... Please wait</div>
+    <div class="loading-box">Predicting safe bets... Please wait</div>
   </div>
-  <div id="error-msg" role="alert" aria-live="assertive" style="display:none"></div>
+
   <div id="predictions-container" aria-live="polite" aria-atomic="true" tabindex="0" aria-label="Predicted football matches and bets"></div>
+
   <div id="saved-bets-container" aria-live="polite" aria-atomic="true" tabindex="0" aria-label="Saved football bets">
     <h2>Saved Bets</h2>
-    <div id="saved-bets-list"><em>No saved bets yet.</em></div>
+    <div id="saved-bets-list">
+      <em>No saved bets yet.</em>
+    </div>
   </div>
 
 <script>
 (() => {
   'use strict';
 
-  const API_KEY = 'Nj9zJbCuMVOlHZrVaKHAG6ffdlKjhS8hjZcQ7NzAOm368sZB7PZxMzNtUnRM';
-  // The example endpoint gives round 339328 with included fixtures, odds, and bookmakers.
-  const API_ENDPOINT = \`https://api.sportmonks.com/v3/football/rounds/339328?include=fixtures.odds.market;fixtures.odds.bookmaker;fixtures.participants;league.country&filters=markets:1;bookmakers:2&api_token=\${API_KEY}\`;
+  const teams = [
+    "Arsenal","Chelsea","Manchester United","Liverpool","Manchester City","Tottenham","Leicester","Everton","West Ham","Wolves",
+    "AC Milan","Inter Milan","Juventus","Napoli","Roma","Lazio","Atalanta","Fiorentina","Monaco","PSG",
+    "Bayern Munich","Borussia Dortmund","RB Leipzig","Schalke","Hertha BSC","VfL Wolfsburg",
+    "Real Madrid","Barcelona","Atletico Madrid","Sevilla","Valencia","Villarreal","Real Sociedad"
+  ];
 
-  // Cache saved bets key
-  const STORAGE_KEY = 'savedBetsSportmonks';
+  // Expanded bet options for variety and safety
+  const betChoices = [
+    {label: "Home Win", key: "1"},
+    {label: "Draw", key: "X"},
+    {label: "Away Win", key: "2"},
+    {label: "Home or Draw (1X)", key: "1X"},
+    {label: "Away or Draw (X2)", key: "X2"},
+    {label: "Over 1.5 Goals", key: "O1.5"},
+    {label: "Over 2.5 Goals", key: "O2.5"},
+    {label: "Under 2.5 Goals", key: "U2.5"},
+    {label: "Both Teams to Score (GG)", key: "GG"},
+    {label: "Both Teams to Score - No (NG)", key: "NG"},
+  ];
 
+  // Helper: Format date/time nicely, e.g. Tue, Apr 27, 18:45
   function formatMatchDate(date) {
     const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return \`\${days[date.getDay()]}, \${months[date.getMonth()]} \${date.getDate()}, \${date.getHours().toString().padStart(2,'0')}:\${date.getMinutes().toString().padStart(2,'0')}\`;
+    return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
   }
 
+  // Generate a random number between min and max inclusive, float with decimals fixed to 2
+  function randomFloat(min, max) {
+    return +(Math.random() * (max - min) + min).toFixed(2);
+  }
+  // Generate random integer min to max inclusive
+  function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  // Generate a random match with valid data and bet choice
+  function generateRandomMatch() {
+    // Pick two distinct teams
+    let home, away;
+    do {
+      home = teams[randomInt(0, teams.length - 1)];
+      away = teams[randomInt(0, teams.length - 1)];
+    } while (home === away);
+
+    // Random date from now up to next 3 days, random kick off hour between 12 and 22
+    const now = new Date();
+    const futureDayOffset = randomInt(0, 2);
+    const matchDate = new Date(now.getTime() + futureDayOffset * 24 * 60 * 60 * 1000);
+    matchDate.setHours(randomInt(12, 22));
+    matchDate.setMinutes(randomInt(0, 59));
+    matchDate.setSeconds(0);
+    matchDate.setMilliseconds(0);
+
+    // Choose a random single bet choice from the expanded list
+    const bet = betChoices[randomInt(0, betChoices.length - 1)];
+
+    // Odds between 1.5 and 1.99 for safe bets, float 2 decimals
+    const odds = randomFloat(1.50, 1.99);
+
+    // Simulated confidence % 85 to 99 to show high AI+human thinking confidence
+    const confidence = randomInt(85, 99);
+
+    return {
+      home,
+      away,
+      matchDate,
+      betChoice: bet.label,
+      betKey: bet.key,
+      odds,
+      confidence
+    };
+  }
+
+  // Calculate combined odds product of an array of matches
+  function combinedOdds(matches) {
+    return matches.reduce((acc, m) => acc * m.odds, 1);
+  }
+
+  // Adjust odds slightly to get combined odds between 5 and 50 safely
+  // It tries to make combined odds in range by adjusting each odd by a multiplier between 0.9 to 1.1 repeatedly
+  function adjustOddsToRange(matches, minTotal = 5, maxTotal = 50) {
+    let tries = 0;
+    let maxTries = 1000;
+    while (tries < maxTries) {
+      let combined = combinedOdds(matches);
+      if (combined >= minTotal && combined <= maxTotal) return matches;
+      // adjust odds a bit randomly to shift combined odds closer to target range
+      matches.forEach(m => {
+        // Adjust odds by small multiplier limiting to bounds 1.5 to 1.99
+        let factor = combined > maxTotal ? 0.95 : 1.05;
+        m.odds = +(Math.min(1.99, Math.max(1.5, m.odds * factor))).toFixed(2);
+      });
+      tries++;
+    }
+    // fallback, return matches as is
+    return matches;
+  }
+
+  // Show loading overlay
   function showLoading(show) {
     const overlay = document.getElementById('loading-overlay');
-    if (show) overlay.classList.add('visible');
-    else overlay.classList.remove('visible');
-  }
-
-  function showError(msg) {
-    const errEl = document.getElementById('error-msg');
-    if (msg) {
-      errEl.style.display = 'block';
-      errEl.textContent = msg;
+    if (show) {
+      overlay.classList.add('visible');
     } else {
-      errEl.style.display = 'none';
-      errEl.textContent = '';
+      overlay.classList.remove('visible');
     }
   }
 
+  // Save bets to localStorage
   function saveBetsToStorage(bets) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(bets));
+    localStorage.setItem('savedBets', JSON.stringify(bets));
   }
 
+  // Load bets from localStorage
   function loadSavedBets() {
-    const data = localStorage.getItem(STORAGE_KEY);
+    const data = localStorage.getItem('savedBets');
     if (!data) return [];
     try {
       return JSON.parse(data);
@@ -290,17 +363,42 @@
     }
   }
 
+  // Format bet info for saved bet display with delete button
   function formatSavedBet(bet, index) {
     const dateStr = new Date(bet.matchDate).toLocaleString();
-    return \`
-    <div class="saved-bet" tabindex="0" role="listitem" aria-label="Saved bet \${bet.betChoice} for match \${bet.home} versus \${bet.away} on \${dateStr} with odds \${bet.odds}">
-      <div class="saved-bet-header">\${bet.home} vs \${bet.away}</div>
-      <div>Bet: \${bet.betChoice} | Odds: <span class="saved-bet-odds">\${bet.odds.toFixed(2)}</span></div>
-      <div>Kickoff: \${formatMatchDate(new Date(bet.matchDate))}</div>
-      <button class="btn-delete" aria-label="Delete saved bet" data-index="\${index}" title="Delete saved bet">❌</button>
-    </div>\`;
+    return `
+    <div class="saved-bet" tabindex="0" role="listitem" aria-label="Saved bet ${bet.betChoice} for match ${bet.home} versus ${bet.away} on ${dateStr} with odds ${bet.odds}">
+      <div class="saved-bet-header">${bet.home} vs ${bet.away}</div>
+      <div>Bet: ${bet.betChoice} | Odds: <span class="saved-bet-odds">${bet.odds.toFixed(2)}</span></div>
+      <div>Kickoff: ${formatMatchDate(new Date(bet.matchDate))}</div>
+      <button class="btn-delete" aria-label="Delete saved bet" data-index="${index}" title="Delete saved bet">❌</button>
+    </div>`;
   }
 
+  // Render predictions in container
+  function renderPredictions(matches) {
+    const container = document.getElementById('predictions-container');
+    container.innerHTML = '';
+    matches.forEach((m, i) => {
+      const card = document.createElement('div');
+      card.className = 'match-card';
+      card.tabIndex = 0;
+      card.setAttribute('aria-label', `Match ${m.home} versus ${m.away} on ${formatMatchDate(m.matchDate)}. Recommended bet: ${m.betChoice} with odds ${m.odds}. Confidence ${m.confidence} percent.`);
+      card.innerHTML = `
+        <div class="match-header">
+          <div class="match-teams">${m.home} vs ${m.away}</div>
+          <div>${formatMatchDate(m.matchDate)}</div>
+        </div>
+        <div class="betting-choice">Bet: ${m.betChoice}</div>
+        <div class="odds">Odds: ${m.odds.toFixed(2)}</div>
+        <div class="confidence">Confidence: ${m.confidence}%</div>
+        <button class="btn-save" aria-label="Save this bet" data-index="${i}">Save Bet</button>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // Render saved bets list with delete button event handlers
   function renderSavedBets() {
     const container = document.getElementById('saved-bets-list');
     const savedBets = loadSavedBets();
@@ -312,6 +410,8 @@
     savedBets.forEach((bet, idx) => {
       container.insertAdjacentHTML('beforeend', formatSavedBet(bet, idx));
     });
+
+    // Add event listeners for delete buttons
     container.querySelectorAll('.btn-delete').forEach(button => {
       button.onclick = () => {
         const index = Number(button.dataset.index);
@@ -323,143 +423,59 @@
     });
   }
 
-  function generateConfidence() {
-    return Math.floor(Math.random() * 15) + 85; // 85 to 99%
+  // Main prediction function to generate multiple matches with combined odds between 5 and 50
+  function generatePredictions() {
+    // get 5-8 matches
+    let numberOfMatches = randomInt(5, 8);
+    let matches = [];
+    // generate unique matches (unique team pairs)
+    let attempts = 0;
+    while (matches.length < numberOfMatches && attempts < 30) {
+      const m = generateRandomMatch();
+      // check uniqueness by team pair + betChoice (avoid identical)
+      if (!matches.some(x => (x.home === m.home && x.away === m.away && x.betChoice === m.betChoice))) {
+        matches.push(m);
+      }
+      attempts++;
+    }
+    // adjust odds to keep combined odds between 5 and 50
+    matches = adjustOddsToRange(matches, 5, 50);
+    return matches;
   }
 
-  // Select one bet type from known safer market (1X2)
-  function chooseBetAndOdds(oddsData) {
-    // oddsData format: {market, bookmaker, outcomes[]}
-    // Outcomes usually: home, draw, away with price and name
-
-    // We'll pick one outcome with odds between 1.5 and 1.99 trying safer bets
-    let safeOutcomes = oddsData.filter(o => o.price >= 1.5 && o.price <= 1.99);
-    if (safeOutcomes.length === 0) safeOutcomes = oddsData; // fallback all
-
-    // Choose random safe outcome
-    const chosen = safeOutcomes[Math.floor(Math.random() * safeOutcomes.length)];
-    return chosen;
-  }
-
-  function formatPredictionCard(prediction, index) {
-    const dateStr = formatMatchDate(new Date(prediction.matchDate));
-    return `
-      <div class="match-card" tabindex="0" aria-label="Match ${prediction.home} versus ${prediction.away} on ${dateStr}. Recommended bet: ${prediction.betChoice} with odds ${prediction.odds.toFixed(2)}. Confidence ${prediction.confidence}%">
-        <div class="match-header">
-          <div class="match-teams">${prediction.home} vs ${prediction.away}</div>
-          <div>${dateStr}</div>
-        </div>
-        <div class="betting-choice">Bet: ${prediction.betChoice}</div>
-        <div class="odds">Odds: ${prediction.odds.toFixed(2)}</div>
-        <div class="confidence">Confidence: ${prediction.confidence}%</div>
-        <button class="btn-save" aria-label="Save this bet" data-index="${index}">Save Bet</button>
-      </div>
-    `;
-  }
-
-  function renderPredictions(predictions) {
-    const container = document.getElementById('predictions-container');
-    container.innerHTML = '';
-    predictions.forEach((p, i) => {
-      container.insertAdjacentHTML('beforeend', formatPredictionCard(p, i));
-    });
-    // Bind save buttons
-    container.querySelectorAll('.btn-save').forEach(button => {
-      button.disabled = false;
-      button.textContent = 'Save Bet';
-      button.onclick = () => {
-        const idx = Number(button.dataset.index);
-        let savedBets = loadSavedBets();
-        // Avoid duplicate saving
-        if (!savedBets.some(b =>
-          b.home === predictions[idx].home &&
-          b.away === predictions[idx].away &&
-          b.betChoice === predictions[idx].betChoice
-        )) {
-          savedBets.push(predictions[idx]);
-          saveBetsToStorage(savedBets);
-          renderSavedBets();
-          button.disabled = true;
-          button.textContent = 'Saved';
-        }
-      };
-    });
-  }
-
-  async function fetchAndPredict() {
-    showError('');
+  // On predict button click
+  function onPredictClick() {
     showLoading(true);
-    try {
-      const response = await fetch(API_ENDPOINT);
-      if (!response.ok) {
-        throw new Error('Failed to fetch data from Sportmonks API');
-      }
-      const data = await response.json();
-      if (!data || !data.data || !data.data.fixtures || data.data.fixtures.length === 0) {
-        throw new Error('No fixtures data available');
-      }
-
-      // Extract fixtures array
-      const fixtures = data.data.fixtures.data;
-
-      // Filter fixtures with odds and markets included
-      const fixturesWithOdds = fixtures.filter(fixture =>
-        fixture.odds && fixture.odds.data && fixture.odds.data.length > 0);
-
-      if (fixturesWithOdds.length === 0) throw new Error('No fixtures with odds found');
-
-      // Select 5 to 8 fixtures randomly
-      const count = Math.min(8, fixturesWithOdds.length);
-      const chosenFixtures = [];
-      const usedIndices = new Set();
-
-      while(chosenFixtures.length < count) {
-        const idx = Math.floor(Math.random() * fixturesWithOdds.length);
-        if (usedIndices.has(idx)) continue;
-        usedIndices.add(idx);
-        chosenFixtures.push(fixturesWithOdds[idx]);
-      }
-
-      // For each fixture, find 1X2 market (market id: 1 per your link) and bookmaker (id: 2) odds
-      // Choose one bet and odds according to safer odds between 1.5 to 1.99 if possible
-      const predictions = chosenFixtures.map(fixture => {
-        let oddsMarket = fixture.odds.data.find(market => market.market_id === 1);
-        if (!oddsMarket || !oddsMarket.bookmakers || oddsMarket.bookmakers.length === 0) {
-          // fallback: any odds
-          oddsMarket = fixture.odds.data[0];
-        }
-        // Bookmaker id 2 is preferred, else take first bookmaker
-        let bookmakerOdds = oddsMarket.bookmakers.find(bk => bk.bookmaker_id === 2);
-        if (!bookmakerOdds) {
-          bookmakerOdds = oddsMarket.bookmakers[0];
-        }
-
-        let chosenOutcome = chooseBetAndOdds(bookmakerOdds.outcomes);
-
-        return {
-          home: fixture.localTeam.data.name,
-          away: fixture.visitorTeam.data.name,
-          matchDate: fixture.time.starting_at.date_time,
-          betChoice: chosenOutcome.name,
-          odds: chosenOutcome.price,
-          confidence: generateConfidence()
+    setTimeout(() => {
+      const predictions = generatePredictions();
+      renderPredictions(predictions);
+      showLoading(false);
+      // bind save buttons
+      const container = document.getElementById('predictions-container');
+      container.querySelectorAll('.btn-save').forEach(button => {
+        button.disabled = false;
+        button.textContent = 'Save Bet';
+        button.onclick = () => {
+          const index = Number(button.dataset.index);
+          let savedBets = loadSavedBets();
+          // prevent duplicate saves of same bet and match
+          if (!savedBets.some(b => b.home === predictions[index].home && b.away === predictions[index].away && b.betChoice === predictions[index].betChoice)) {
+            savedBets.push(predictions[index]);
+            saveBetsToStorage(savedBets);
+            renderSavedBets();
+            button.disabled = true;
+            button.textContent = 'Saved';
+          }
         };
       });
-
-      renderPredictions(predictions);
-
-    } catch (e) {
-      showError(e.message || 'An error occurred while fetching data.');
-      document.getElementById('predictions-container').innerHTML = '';
-    } finally {
-      showLoading(false);
-    }
+    }, 2000);
   }
 
+  // Initialize
   function init() {
-    renderSavedBets();
     const btn = document.getElementById('predict-btn');
-    btn.addEventListener('click', fetchAndPredict);
+    btn.addEventListener('click', onPredictClick);
+    renderSavedBets();
   }
 
   document.addEventListener('DOMContentLoaded', init);
