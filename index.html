@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>AI Football Bet Predictor - Human + AI Thinking</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap');
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 600px;
+    max-width: 350px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 15px;
+    user-select: none;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  header h1 {
+    font-weight: 700;
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+    color: #ffd700;
+    text-shadow: 0 0 8px #ffd700;
+  }
+  header p {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #ddd;
+  }
+  #matches {
+    width: 100%;
+    border-radius: 10px;
+    max-height: 370px;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .match {
+    background: rgba(255, 255, 255, 0.1);
+    margin-bottom: 12px;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+  }
+  .teams {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .teams span {
+    flex: 1;
+    text-align: center;
+  }
+  .date {
+    font-size: 0.85rem;
+    color: #bbb;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .bet-prediction {
+    background: #22bb33cc;
+    border-radius: 10px;
+    color: #e6ffe6;
+    padding: 10px;
+    font-weight: 700;
+    box-shadow: 0 0 10px #22bb33cc;
+    position: relative;
+  }
+  .bet-prediction .guarantee {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 1.5rem;
+    color: #00ff00;
+    text-shadow: 0 0 8px #00ff00;
+  }
+  button.save-btn {
+    margin-top: 8px;
+    background: #ffd700;
+    border: none;
+    color: #222;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 10px #ffd700cc;
+    transition: background 0.3s ease;
+    align-self: center;
+    max-width: 150px;
+  }
+  button.save-btn:hover {
+    background: #e6c200;
+  }
+  #predictBtn {
+    margin-bottom: 10px;
+    background: #ffd700;
+    color: #222;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 12px;
+    cursor: pointer;
+    width: 100%;
+    box-shadow: 0 0 12px #ffd700aa;
+    transition: background 0.3s ease;
+  }
+  #predictBtn:hover {
+    background: #e6c200;
+  }
+  #savedBets {
+    width: 100%;
+    max-height: 140px;
+    overflow-y: auto;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  #savedBets h2 {
+    font-size: 1.1rem;
+    margin: 0 0 8px 0;
+    color: #ffd700;
+    text-shadow: 0 0 6px #ffd700;
+  }
+  .saved-bet {
+    background: #1f331fcc;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+  }
+  .saved-bet strong {
+    color: #00ff00;
+  }
+  #clearSavedBtn {
+    background: #bb2222cc;
+    border: none;
+    color: #ffd6d6;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 10px #bb2222cc;
+    width: 100%;
+    margin-top: 6px;
+    transition: background 0.3s ease;
+  }
+  #clearSavedBtn:hover {
+    background: #a00f0fcc;
+  }
+  footer {
+    margin-top: 8px;
+    font-size: 0.75rem;
+    color: #bbb;
+    text-align: center;
+    max-width: 300px;
+    line-height: 1.2;
+  }
+  /* Scrollbar */
+  #matches::-webkit-scrollbar,
+  #savedBets::-webkit-scrollbar {
+    width: 6px;
+  }
+  #matches::-webkit-scrollbar-thumb,
+  #savedBets::-webkit-scrollbar-thumb {
+    background-color: #ffd700aa;
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+<div>
+  <header>
+    <h1>AI Football Bet Predictor</h1>
+    <p>AI Prediction combined with 100% human-like reasoning & safer bets (odds 10 to 100) ✅</p>
+  </header>
+
+  <button id="predictBtn" aria-label="Calculate predictions for all matches">Predict Bets</button>
+
+  <div id="matches" aria-live="polite" aria-label="List of football matches to predict"></div>
+
+  <section id="savedBets" aria-live="polite" aria-label="Saved betting predictions">
+    <h2>Saved Bets</h2>
+    <div id="savedBetsList"></div>
+    <button id="clearSavedBtn" aria-label="Clear all saved bets">Clear Saved Bets</button>
+  </section>
+
+  <footer>
+    Disclaimer: No prediction can guarantee 100% accuracy. AI predictions are simulated and combined with human-like reasoning for educational &amp; entertainment use only.
+  </footer>
+</div>
+
+<script>
+const teamsStats = {
+  "Real Madrid": { capacity: 95, form: 1.2 },
+  "Barcelona": { capacity: 90, form: 1.1 },
+  "Manchester City": { capacity: 92, form: 1.3 },
+  "Liverpool": { capacity: 88, form: 1.0 },
+  "Bayern Munich": { capacity: 93, form: 1.25 },
+  "Borussia Dortmund": { capacity: 85, form: 1.05 },
+  "Juventus": { capacity: 87, form: 1.15 },
+  "AC Milan": { capacity: 80, form: 1.0 },
+  "Paris Saint-Germain": { capacity: 94, form: 1.3 },
+  "Marseille": { capacity: 75, form: 0.9 },
+  "Chelsea": { capacity: 86, form: 1.05 },
+  "Arsenal": { capacity: 83, form: 0.95 },
+  "Atlético Madrid": { capacity: 89, form: 1.1 },
+  "Sevilla": { capacity: 78, form: 0.9 }
+};
+
+const matchesData = [
+  {id: 1, home: 'Real Madrid', away: 'Barcelona', date: '2024-06-21'},
+  {id: 2, home: 'Manchester City', away: 'Liverpool', date: '2024-06-22'},
+  {id: 3, home: 'Bayern Munich', away: 'Borussia Dortmund', date: '2024-06-23'},
+  {id: 4, home: 'Juventus', away: 'AC Milan', date: '2024-06-24'},
+  {id: 5, home: 'Paris Saint-Germain', away: 'Marseille', date: '2024-06-25'},
+  {id: 6, home: 'Chelsea', away: 'Arsenal', date: '2024-06-26'},
+  {id: 7, home: 'Atlético Madrid', away: 'Sevilla', date: '2024-06-27'}
+];
+
+const bettingOptionsLabels = {
+  '1': 'Home Win (1)',
+  'X': 'Draw (X)',
+  '2': 'Away Win (2)',
+  '1X': 'Home Win or Draw (1X)',
+  'X2': 'Draw or Away Win (X2)',
+  'Over1.5': 'Over 1.5 Goals',
+  'Over2.5': 'Over 2.5 Goals',
+  'Over3.5': 'Over 3.5 Goals',
+  'Over4.5': 'Over 4.5 Goals',
+  'Over5.5': 'Over 5.5 Goals'
+};
+
+const matchesContainer = document.getElementById('matches');
+const predictBtn = document.getElementById('predictBtn');
+const savedBetsList = document.getElementById('savedBetsList');
+const clearSavedBtn = document.getElementById('clearSavedBtn');
+
+function createMatchElement(match) {
+  const div = document.createElement('div');
+  div.className = 'match';
+  div.id = 'match-' + match.id;
+  div.setAttribute('tabindex', '0');
+  div.innerHTML = `
+    <div class="teams" aria-label="Football match teams">
+      <span aria-label="Home team">${match.home}</span>
+      <span>vs</span>
+      <span aria-label="Away team">${match.away}</span>
+    </div>
+    <div class="date" aria-label="Match date">${new Date(match.date).toLocaleDateString()}</div>
+    <div class="bet-prediction" aria-label="Predicted betting option"></div>
+    <button class="save-btn" aria-label="Save this predicted bet">Save Bet</button>
+  `;
+  return div;
+}
+
+function clamp(num, min, max) {
+  return num < min ? min : num > max ? max : num;
+}
+
+/**
+ * AI Prediction logic with simulated 100% human-like reasoning,
+ * combining team capacity, recent form, and a subtle random offset to mimic intuition.
+ */
+function aiPredictDetailed(match) {
+  const homeStats = teamsStats[match.home] || {capacity: 70, form: 1};
+  const awayStats = teamsStats[match.away] || {capacity: 70, form: 1};
+
+  const homeBase = homeStats.capacity * homeStats.form;
+  const awayBase = awayStats.capacity * awayStats.form;
+
+  const homeStrength = homeBase * 1.05; // home advantage ~5%
+  const awayStrength = awayBase;
+
+  const totalStrength = homeStrength + awayStrength;
+
+  let pHome = homeStrength / totalStrength;
+  let pAway = awayStrength / totalStrength;
+
+  const diffRatio = Math.abs(homeStrength - awayStrength) / totalStrength;
+  const pDraw = clamp(0.35 - diffRatio * 0.5, 0.2, 0.35);
+
+  pHome *= (1 - pDraw);
+  pAway *= (1 - pDraw);
+
+  const sumP = pHome + pDraw + pAway;
+  pHome /= sumP;
+  pDraw /= sumP;
+  pAway /= sumP;
+
+  // Human-like slight random offset ±5%
+  function addHumanTouch(prob) {
+    const offset = (Math.random() - 0.5) * 0.05;
+    let newProb = prob + offset;
+    return clamp(newProb, 0, 1);
+  }
+
+  const hp = addHumanTouch(pHome);
+  const dp = addHumanTouch(pDraw);
+  const ap = addHumanTouch(pAway);
+
+  const finalSum = hp + dp + ap;
+  const finalHome = hp / finalSum;
+  const finalDraw = dp / finalSum;
+  const finalAway = ap / finalSum;
+
+  function probToOdds(prob) {
+    let odds = (10 + ((1 / prob) - 1) * 10);
+    odds = clamp(odds, 10, 100);
+    return parseFloat(odds.toFixed(2));
+  }
+
+  const combinedStrength = homeStrength + awayStrength;
+  const baseOverConf = clamp(0.5 + (combinedStrength - 120) / 80 * 0.4, 0.5, 0.9);
+
+  function overOddsAndConf(step) {
+    const conf = clamp(baseOverConf - 0.15 * step, 0.1, 0.7);
+    return {confidence: Math.round(conf * 100), odds: probToOdds(conf)};
+  }
+
+  const predictions = {};
+
+  predictions['1'] = {confidence: Math.round(finalHome * 100), odds: probToOdds(finalHome)};
+  predictions['X'] = {confidence: Math.round(finalDraw * 100), odds: probToOdds(finalDraw)};
+  predictions['2'] = {confidence: Math.round(finalAway * 100), odds: probToOdds(finalAway)};
+  predictions['1X'] = {confidence: Math.round((finalHome + finalDraw) * 100), odds: probToOdds(finalHome + finalDraw)};
+  predictions['X2'] = {confidence: Math.round((finalDraw + finalAway) * 100), odds: probToOdds(finalDraw + finalAway)};
+  predictions['Over1.5'] = overOddsAndConf(0);
+  predictions['Over2.5'] = overOddsAndConf(1);
+  predictions['Over3.5'] = overOddsAndConf(2);
+  predictions['Over4.5'] = overOddsAndConf(3);
+  predictions['Over5.5'] = overOddsAndConf(4);
+
+  return predictions;
+}
+
+function saveBet(matchId, betKey, betLabel, odds, confidence) {
+  const savedBets = JSON.parse(localStorage.getItem('savedBets') || '[]');
+  if (!savedBets.some(b => b.matchId === matchId && b.betKey === betKey)) {
+    savedBets.push({matchId, betKey, betLabel, odds, confidence});
+    localStorage.setItem('savedBets', JSON.stringify(savedBets));
+    renderSavedBets();
+    alert(`Bet saved: ${betLabel} @ odds ${odds}, confidence ${confidence}%`);
+  } else {
+    alert('This bet for this match is already saved.');
+  }
+}
+
+function renderSavedBets() {
+  const savedBets = JSON.parse(localStorage.getItem('savedBets') || '[]');
+  savedBetsList.innerHTML = '';
+  if (savedBets.length === 0) {
+    savedBetsList.textContent = 'No saved bets yet.';
+    return;
+  }
+  savedBets.forEach(bet => {
+    const match = matchesData.find(m => m.id === bet.matchId);
+    if (!match) return;
+    const div = document.createElement('div');
+    div.className = 'saved-bet';
+    div.innerHTML = `
+      <strong>${bet.betLabel} ✅</strong><br/>
+      Match: ${match.home} vs ${match.away} (${new Date(match.date).toLocaleDateString()})<br/>
+      Odds: ${bet.odds}, Confidence: ${bet.confidence}%
+    `;
+    savedBetsList.appendChild(div);
+  });
+}
+
+function clearSavedBets() {
+  if (confirm('Clear all saved bets?')) {
+    localStorage.removeItem('savedBets');
+    renderSavedBets();
+  }
+}
+
+function initializeMatches() {
+  matchesContainer.innerHTML = '';
+  matchesData.forEach(m => {
+    matchesContainer.appendChild(createMatchElement(m));
+  });
+}
+
+function updatePredictions() {
+  matchesData.forEach(match => {
+    const matchEl = document.getElementById('match-' + match.id);
+    if (!matchEl) return;
+    const predictionDiv = matchEl.querySelector('.bet-prediction');
+    const saveBtn = matchEl.querySelector('.save-btn');
+    const predictions = aiPredictDetailed(match);
+    if (!predictions || Object.keys(predictions).length === 0) {
+      predictionDiv.textContent = 'Prediction not available.';
+      return;
+    }
+
+    // Find the best bet: highest confidence with odds 10 to 100
+    let bestKey = null;
+    let bestConfidence = -1;
+    let bestOdds = 0;
+    for (const [key, val] of Object.entries(predictions)) {
+      if (val.odds >= 10 && val.odds <= 100 && val.confidence > bestConfidence) {
+        bestConfidence = val.confidence;
+        bestOdds = val.odds;
+        bestKey = key;
+      }
+    }
+
+    if (!bestKey) {
+      bestConfidence = -1;
+      for (const [key, val] of Object.entries(predictions)) {
+        if (val.confidence > bestConfidence) {
+          bestConfidence = val.confidence;
+          bestOdds = val.odds;
+          bestKey = key;
+        }
+      }
+    }
+
+    predictionDiv.innerHTML = `
+      <span class="guarantee" aria-label="guaranteed prediction">✅</span>
+      Prediction: ${bettingOptionsLabels[bestKey]}<br/>
+      Odds: ${bestOdds}<br/>
+      Confidence: ${bestConfidence}%
+    `;
+
+    saveBtn.onclick = () => {
+      saveBet(match.id, bestKey, bettingOptionsLabels[bestKey], bestOdds, bestConfidence);
+    };
+  });
+}
+
+predictBtn.addEventListener('click', () => {
+  updatePredictions();
+});
+
+clearSavedBtn.addEventListener('click', clearSavedBets);
+
+initializeMatches();
+renderSavedBets();
+updatePredictions();
+</script>
+</body>
+</html>
